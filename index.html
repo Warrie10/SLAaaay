@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IronScales SLA Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            text-align: center;
+        }
+        .container {
+            width: 80%;
+            margin: auto;
+        }
+        .incident {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+        .incident input {
+            margin-right: 10px;
+        }
+        .timer {
+            font-weight: bold;
+        }
+        .resolved {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        .resolved:hover {
+            background-color: #45a049;
+        }
+        .green {
+            background-color: #d4edda;
+        }
+        .yellow {
+            background-color: #fff3cd;
+        }
+        .red {
+            background-color: #f8d7da;
+        }
+    </style>
+</head>
+<body>
+    <h1>PERFORMANTA</h1>
+    <h2>IRONSCALES SLA</h2>
+    <div class="container">
+        <div>
+            <input type="text" id="isCode" placeholder="Enter IS code">
+            <input type="datetime-local" id="arrivalTime">
+            <button onclick="addIncident()">Add Incident</button>
+        </div>
+        <div id="incidentList"></div>
+    </div>
+
+    <script>
+        const TIMER_DURATION = 45 * 60 * 1000; // 45 minutes in milliseconds
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadIncidents();
+        });
+
+        function addIncident() {
+            const isCode = document.getElementById('isCode').value.trim();
+            const arrivalTime = new Date(document.getElementById('arrivalTime').value);
+            
+            if (!isCode || isNaN(arrivalTime.getTime())) {
+                alert('Please enter a valid IS code and arrival time.');
+                return;
+            }
+
+            const incidents = getIncidents();
+            incidents.push({ isCode, arrivalTime });
+            saveIncidents(incidents);
+            renderIncidents();
+            document.getElementById('isCode').value = '';
+            document.getElementById('arrivalTime').value = '';
+        }
+
+        function resolveIncident(index) {
+            const incidents = getIncidents();
+            incidents.splice(index, 1);
+            saveIncidents(incidents);
+            renderIncidents();
+        }
+
+        function getIncidents() {
+            const incidents = localStorage.getItem('incidents');
+            return incidents ? JSON.parse(incidents) : [];
+        }
+
+        function saveIncidents(incidents) {
+            localStorage.setItem('incidents', JSON.stringify(incidents));
+        }
+
+        function renderIncidents() {
+            const incidents = getIncidents();
+            const incidentList = document.getElementById('incidentList');
+            incidentList.innerHTML = '';
+
+            incidents.forEach((incident, index) => {
+                const now = new Date();
+                const timeElapsed = now - new Date(incident.arrivalTime);
+                const timeRemaining = TIMER_DURATION - timeElapsed;
+                const minutesRemaining = Math.max(Math.ceil(timeRemaining / 60000), 0);
+                const statusClass = minutesRemaining > 30 ? 'green' : (minutesRemaining > 10 ? 'yellow' : 'red');
+
+                const incidentElement = document.createElement('div');
+                incidentElement.className = `incident ${statusClass}`;
+                incidentElement.innerHTML = `
+                    <div>
+                        <strong>IS Code:</strong> ${incident.isCode} 
+                        <span class="timer">Timer: ${formatTime(minutesRemaining)}</span>
+                    </div>
+                    <button class="resolved" onclick="resolveIncident(${index})">Resolved</button>
+                `;
+
+                incidentList.appendChild(incidentElement);
+            });
+        }
+
+        function formatTime(minutes) {
+            const hours = Math.floor(minutes / 60);
+            const mins = minutes % 60;
+            return `${hours}h ${mins}m`;
+        }
+
+        function updateTimers() {
+            renderIncidents();
+        }
+
+        setInterval(updateTimers, 60000); // Update every minute
+    </script>
+</body>
+</html>
